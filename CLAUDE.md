@@ -56,6 +56,7 @@ docs/         PLAN.md, ARCHITECTURE.md, DATABASE.md
 ## How to work with me (the developer)
 
 - Explain new concepts briefly when they first appear. I am learning.
+- `docs/LEARNING.md` lists the concepts I want to learn. When a task touches one for the first time, explain it briefly and tell me which checklist item it covers.
 - Prefer simple, readable code over clever code.
 - When there are trade-offs, give 2 options and recommend one, then let me decide.
 - After a design decision, suggest a one-line entry for `DECISIONS.md`.
