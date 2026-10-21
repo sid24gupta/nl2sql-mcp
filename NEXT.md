@@ -2,13 +2,19 @@
 
 ## Next session
 
-- [ ] Write `docs/DATABASE.md` describing each table, its grain, and the golden rules
-      (include the ISO week caveat: e.g. 2025-12-29 is week 1 but year 2025)
-- [ ] Faker seed script for dimensions: teams, users, applications, screens, processes
-- [ ] Seed both fact tables (rule: work effort >= process effort per user/day/app/screen)
-- [ ] Sanity-check the data with a few manual SQL queries
+- [ ] Read-only Postgres role (GRANT/REVOKE); decide on column-level privacy
+      for `dim_user.user_name` (report by `user_uuid` for anonymity)
+- [ ] MCP server: `list_tables`, `describe_table`
+- [ ] Guarded `run_readonly_query` + pytest malicious-query cases
 
 ## Done
+
+### Oct 21
+- `docs/DATABASE.md`: tables, grain, golden rules, seeded data, example queries
+- `db/seed.py`: dimensions + ~51k work / ~36k process rows via `COPY`, with built-in rule checks
+- "Active team" rule clarified in schema comments (team from facts = active users only)
+- Docker Postgres moved to host port 5433 (local Windows Postgres uses 5432)
+- Sanity-checked the data with 7 queries
 
 ### Oct 20
 - `dim_date` populated (2025-10-01 to 2026-12-31, 457 rows) via `db/dim_date.sql`
