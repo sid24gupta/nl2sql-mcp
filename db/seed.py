@@ -325,6 +325,18 @@ def check_facts(cur: psycopg.Cursor) -> None:
     if bad:
         raise RuntimeError(f"{bad} fact rows have a team different from the user's team")
 
+    # Rule: every team has at least 2 active users.
+    cur.execute("""
+        SELECT t.team_name
+        FROM dim_team t
+        LEFT JOIN fact_work_daily f ON f.team_uuid = t.team_uuid
+        GROUP BY t.team_name
+        HAVING COUNT(DISTINCT f.user_uuid) < 2
+    """)
+    small_teams = [row[0] for row in cur.fetchall()]
+    if small_teams:
+        raise RuntimeError(f"teams with fewer than 2 active users: {small_teams}")
+
 
 def print_counts(cur: psycopg.Cursor) -> None:
     for table in ["dim_team", "dim_user", "dim_application", "dim_screen", "dim_process",
