@@ -6,7 +6,8 @@
 --   fact_process_daily  the process-related SUBSET of that effort, per process
 --
 -- Golden rules (also written as COMMENTs so the LLM can read them):
---   1. Team is always taken from the FACT table (fact.team_uuid), never via dim_user.
+--   1. Team is always taken from the FACT table (fact.team_uuid), never via dim_user:
+--      dim_user includes users with no activity, the fact tables contain only active ones.
 --   2. Never add work_daily and process_daily effort together: process is a subset of work.
 --      One-off activity effort = work_daily effort - process_daily effort.
 --   3. Filter and display dates through dim_date.
@@ -50,8 +51,8 @@ CREATE TABLE dim_user (
 );
 COMMENT ON TABLE dim_user IS 'People whose work activity is tracked.';
 COMMENT ON COLUMN dim_user.team_uuid IS
-    'Current team, for reference only. Do NOT use it to group or filter effort by team. '
-    'For team-level analysis always use the team_uuid on the fact table.';
+    'The user''s team. Do NOT use it to group, filter or count by team: it includes users with no activity. '
+    'For team-level analysis (effort, active users, averages) always use the team_uuid on the fact table.';
 
 CREATE TABLE dim_application (
     application_uuid  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,7 +96,8 @@ CREATE TABLE fact_work_daily (
 COMMENT ON TABLE fact_work_daily IS
     'Grain: one row per user, per day, per application, per screen. '
     'Holds TOTAL effort = process effort + one-off activity effort. '
-    'team_uuid is the team the user belonged to on that day; use it for all team analysis. '
+    'team_uuid is the user''s team (same as dim_user.team_uuid) and only covers users who were active; '
+    'use it for all team analysis. '
     'Do not add this table''s effort to fact_process_daily effort (that would double count).';
 COMMENT ON COLUMN fact_work_daily.effort_in_sec IS 'Time spent in seconds. Divide by 3600 for hours.';
 
@@ -113,7 +115,7 @@ COMMENT ON TABLE fact_process_daily IS
     'Grain: one row per user, per day, per application, per screen, per process. '
     'Process-related SUBSET of fact_work_daily effort. '
     'One-off (non-process) activity effort = fact_work_daily effort minus fact_process_daily effort. '
-    'team_uuid is the team the user belonged to on that day.';
+    'team_uuid is the team of the user who performed the work (same as dim_user.team_uuid).';
 COMMENT ON COLUMN fact_process_daily.effort_in_sec IS 'Time spent in seconds. Divide by 3600 for hours.';
 
 -- -----------------------------------------------------------------------------
