@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "5433:5432"   # host 5433 -> container 5432 (5432 on the host is used by a local Postgres)
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
