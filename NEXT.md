@@ -2,10 +2,9 @@
 
 ## Next session
 
-- [ ] Read-only Postgres role (GRANT/REVOKE); decide on column-level privacy
-      for `dim_user.user_name` (report by `user_uuid` for anonymity)
-- [ ] MCP server: `list_tables`, `describe_table`
+- [ ] MCP server: `list_tables`, `describe_table` (show only columns the app user can read)
 - [ ] Guarded `run_readonly_query` + pytest malicious-query cases
+      (incl. rejecting `user_uuid` in output or GROUP BY)
 
 ## Done
 
@@ -15,6 +14,8 @@
 - "Active team" rule clarified in schema comments (team from facts = active users only)
 - Docker Postgres moved to host port 5433 (local Windows Postgres uses 5432)
 - Sanity-checked the data with 7 queries
+- Read-only app user `nl2sql_readonly` (`db/app_user.sql`): SELECT allowlist, no `user_name`,
+  read-only + 5 s timeout
 
 ### Oct 20
 - `dim_date` populated (2025-10-01 to 2026-12-31, 457 rows) via `db/dim_date.sql`
