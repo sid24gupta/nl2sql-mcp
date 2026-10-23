@@ -7,3 +7,12 @@ dependencies = [
     "mcp[cli]>=2.3.0",
     "psycopg[binary]>=3.3.6",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]   # where pytest looks for tests
+pythonpath = ["."]      # so tests can `import mcp_server` from the repo root
