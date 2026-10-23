@@ -4,10 +4,40 @@ Run (stdio transport, started by an MCP client):
     uv run --env-file .env python -m mcp_server.server
 """
 
+from typing import TypedDict
+
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from mcp_server.db import connect
+
+
+# Return types. The SDK turns these into JSON output schemas, so clients know the exact shape.
+class TableSummary(TypedDict):
+    table_name: str
+    description: str | None
+
+
+class Column(TypedDict):
+    name: str
+    type: str
+    nullable: bool
+    description: str | None
+
+
+class ForeignKey(TypedDict):
+    column: str
+    references_table: str
+    references_column: str
+
+
+class TableDescription(TypedDict):
+    table_name: str
+    description: str | None
+    columns: list[Column]
+    primary_key: list[str]
+    foreign_keys: list[ForeignKey]
+
 
 server = MCPServer(
     "nl2sql",
@@ -20,7 +50,7 @@ server = MCPServer(
 
 
 @server.tool()
-def list_tables() -> list[dict]:
+def list_tables() -> list[TableSummary]:
     """List the tables you can query, with a description of each (including usage rules)."""
     with connect() as conn:
         return conn.execute("""
@@ -36,7 +66,7 @@ def list_tables() -> list[dict]:
 
 
 @server.tool()
-def describe_table(table_name: str) -> dict:
+def describe_table(table_name: str) -> TableDescription:
     """Describe one table: its columns (name, type, description), primary key and foreign keys.
 
     Only columns you are allowed to read are listed.
