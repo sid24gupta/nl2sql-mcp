@@ -14,7 +14,7 @@ line, not just to ship. **Always explain what code does and why before or while 
 ## Architecture (v1)
 
 - **PostgreSQL** (Docker): a synthetic star schema of user activity data (dimension + fact tables).
-- **MCP server** (Python, FastMCP): exposes database tools: `list_tables`, `describe_table`,
+- **MCP server** (Python, official MCP SDK 2.x `MCPServer`; FastMCP was renamed in 2.x): exposes database tools: `list_tables`, `describe_table`,
   `run_readonly_query`.
 - **Backend / agent layer** (FastAPI): acts as the MCP client, calls the LLM, runs the agent loop
   (planner, SQL writer, self-correction), returns answers.
@@ -25,7 +25,7 @@ line, not just to ship. **Always explain what code does and why before or while 
 
 ## Tech stack
 
-Python 3.12, uv, FastAPI, FastMCP, asyncpg or psycopg, sqlglot, Pydantic, pytest, ruff,
+Python 3.12, uv, FastAPI, official MCP Python SDK 2.x (`MCPServer`), psycopg, sqlglot, Pydantic, pytest, ruff,
 Docker, docker-compose, GitHub Actions, AWS EC2, Nginx.
 
 ## Folder structure
