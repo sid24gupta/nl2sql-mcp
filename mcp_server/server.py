@@ -4,12 +4,15 @@ Run (stdio transport, started by an MCP client):
     uv run --env-file .env python -m mcp_server.server
 """
 
+from decimal import Decimal
 from typing import TypedDict
 
+import psycopg
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from mcp_server.db import connect
+from mcp_server.guardrail import MAX_ROWS, GuardrailError, check_sql
 
 
 # Return types. The SDK turns these into JSON output schemas, so clients know the exact shape.
@@ -37,6 +40,14 @@ class TableDescription(TypedDict):
     columns: list[Column]
     primary_key: list[str]
     foreign_keys: list[ForeignKey]
+
+
+class QueryResult(TypedDict):
+    sql: str               # the SQL that actually ran (after the guardrail)
+    columns: list[str]
+    rows: list[dict]
+    row_count: int
+    limit_reached: bool    # True if the row limit may have cut off results
 
 
 server = MCPServer(
@@ -123,6 +134,37 @@ def describe_table(table_name: str) -> TableDescription:
         "columns": columns,
         "primary_key": [row["name"] for row in primary_key],
         "foreign_keys": foreign_keys,
+    }
+
+
+@server.tool()
+def run_readonly_query(sql: str) -> QueryResult:
+    """Run one read-only PostgreSQL query and return the rows.
+
+    Rules: a single SELECT (or WITH ... SELECT), no writes. Results must be grouped, never per user:
+    no * and no user_uuid in the output or GROUP BY (COUNT(DISTINCT user_uuid) is fine).
+    At most 1000 rows are returned.
+    """
+    try:
+        safe_sql = check_sql(sql)
+    except GuardrailError as e:
+        raise ToolError(f"Query rejected: {e}") from e
+
+    try:
+        with connect() as conn:
+            cursor = conn.execute(safe_sql)
+            rows = cursor.fetchall()
+            columns = [column.name for column in cursor.description]
+    except psycopg.Error as e:
+        # e.g. unknown column, permission denied, statement timeout: tell the LLM so it can fix the SQL
+        raise ToolError(f"Database error: {e}") from e
+
+    return {
+        "sql": safe_sql,
+        "columns": columns,
+        "rows": [{k: float(v) if isinstance(v, Decimal) else v for k, v in row.items()} for row in rows],
+        "row_count": len(rows),
+        "limit_reached": len(rows) >= MAX_ROWS,
     }
 
 

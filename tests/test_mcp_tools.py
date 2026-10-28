@@ -30,9 +30,9 @@ async def client():
         yield mcp_client
 
 
-async def test_lists_both_tools(client):
+async def test_lists_all_tools(client):
     tools = await client.list_tools()
-    assert {tool.name for tool in tools.tools} == {"list_tables", "describe_table"}
+    assert {tool.name for tool in tools.tools} == {"list_tables", "describe_table", "run_readonly_query"}
 
 
 async def test_list_tables_returns_all_tables_with_descriptions(client):
@@ -69,3 +69,43 @@ async def test_describe_table_rejects_unknown_or_forbidden(client, table_name):
 
     assert result.is_error
     assert "Unknown table" in result.content[0].text
+
+
+async def test_run_readonly_query_returns_rows(client):
+    sql = (
+        "SELECT t.team_name, ROUND(SUM(f.effort_in_sec) / 3600.0, 1) AS hours "
+        "FROM fact_work_daily f JOIN dim_team t ON t.team_uuid = f.team_uuid "
+        "GROUP BY t.team_name ORDER BY t.team_name"
+    )
+    result = await client.call_tool("run_readonly_query", {"sql": sql})
+
+    assert not result.is_error
+    output = result.structured_content
+    assert output["columns"] == ["team_name", "hours"]
+    assert output["row_count"] == 5
+    assert output["rows"][0]["team_name"] == "Team Alpha"
+    assert output["sql"].endswith("LIMIT 1000")
+
+
+async def test_run_readonly_query_rejects_unsafe_sql(client):
+    result = await client.call_tool("run_readonly_query", {"sql": "DROP TABLE dim_team"})
+
+    assert result.is_error
+    assert "Query rejected" in result.content[0].text
+
+
+async def test_run_readonly_query_reports_database_errors(client):
+    result = await client.call_tool("run_readonly_query", {"sql": "SELECT nonexistent_column FROM dim_team"})
+
+    assert result.is_error
+    assert "Database error" in result.content[0].text
+
+
+async def test_user_name_is_blocked_by_the_database(client):
+    # The guardrail allows this (no user_uuid), but the read-only user has no access to user_name:
+    # the second layer of defence catches it.
+    sql = "SELECT location, COUNT(user_name) FROM dim_user GROUP BY location"
+    result = await client.call_tool("run_readonly_query", {"sql": sql})
+
+    assert result.is_error
+    assert "permission denied" in result.content[0].text
