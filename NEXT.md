@@ -2,11 +2,30 @@
 
 ## Next session
 
-- [ ] MCP server: `list_tables`, `describe_table` (show only columns the app user can read)
-- [ ] Guarded `run_readonly_query` + pytest malicious-query cases
-      (incl. rejecting `user_uuid` in output or GROUP BY)
+Week 2 (see `docs/PLAN.md`):
+- [ ] Provider-agnostic LLM client (Groq first, OpenAI-compatible API)
+- [ ] FastAPI `/ask` endpoint: MCP client -> schema tools -> SQL -> run_readonly_query -> summary
+- [ ] 15 to 20 question eval set + accuracy script (baseline number)
 
 ## Done
+
+### Oct 28
+- `mcp_server/guardrail.py` (sqlglot AST): one statement, read queries only, no write/DDL/lock nodes
+  anywhere (incl. CTEs), blocked functions and system tables, no per-user results, LIMIT <= 1000
+- `run_readonly_query` MCP tool: guardrail -> Postgres as `nl2sql_readonly`; rejections and DB
+  errors returned as `ToolError` so the LLM can self-correct
+- 47 passing tests: 36 guardrail unit tests + 11 MCP integration tests
+- Known limitation: renaming `user_uuid` inside a subquery bypasses the per-user check
+  (smaller-group protection deferred)
+
+### Oct 23
+- MCP server (`mcp_server/server.py`, official SDK 2.x `MCPServer`): `list_tables`, `describe_table`
+  - typed structured output (TypedDict), hides columns the app user can't read (`user_name`)
+  - unknown/forbidden tables return a `ToolError` with a helpful message
+- `mcp_server/db.py`: connects as `nl2sql_readonly`, refuses superusers
+- Tested with a stdio smoke client and the MCP Inspector
+- pytest set up (dev dependency, anyio plugin): 7 passing tests in `tests/test_mcp_tools.py`
+- Run tests: `uv run --env-file .env pytest -v` (Docker must be running)
 
 ### Oct 21
 - `docs/DATABASE.md`: tables, grain, golden rules, seeded data, example queries
